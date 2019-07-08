@@ -1,0 +1,125 @@
+---
+title: "Practical Machine learning assignment"
+author: "Reshu"
+date: "19 September 2017"
+output: html_document
+---
+##Overview
+The goal of this project is to use data from accelerometers on the belt, forearm,arm and dumbbell of six participants and predict the manner in which they did exercise('Classe' variable in training dataset).The training dataset consists of accelerometer data with a label identifying the activity of the participant .Testing data consists of accelerometer data without label.We need to predict labels for testing data.
+##Loading data
+```{r setup, include=FALSE}
+
+library(caret)
+library(rpart)
+library(corrplot)
+library(rpart.plot)
+library(randomForest)
+library(dplyr)
+library(lubridate)
+library(shiny)
+library(gbm)
+
+ptrain<-read.csv("pml-training.csv",na.strings = c("NA","","#DIV/0"))
+ptest<-read.csv("pml-testing.csv",na.strings = c("NA","","#DIV/0"))
+
+```
+
+## Exploratory data analysis
+
+```{r}
+dim(ptrain)
+dim(ptest)
+```
+
+##Data Processing
+####Data Partitioning
+```{r }
+set.seed(10)
+inTrain<-createDataPartition(y=ptrain$classe,p=0.7,list=FALSE)
+dataTrain1<-ptrain[inTrain,]
+dataTest1<-ptrain[-inTrain,]
+```
+####Data cleaning
+Now we reduce features by removing variables with nearly zero variance,almost always NA and variables that dont manke sense for prediction .We decide these variables by analysing training set data and perform same operations on test data
+```{r}
+#remove variables with near zero variance
+nzv<-nearZeroVar(dataTrain1)
+dataTrain1<-dataTrain1[,-nzv]
+dataTest1<-dataTest1[,-nzv]
+
+#remove variables that are almost always NA
+almostNA<-sapply(dataTrain1,function(x) mean(is.na(x))) >0.95
+dataTrain1<-dataTrain1[,almostNA==FALSE]
+dataTest1<-dataTest1[,almostNA==FALSE]
+
+#remove variables that dont make sense for prediction (x,user_name, raw_timestamp_part_1 ,raw_timestamp_part_2,cvtd_timestamp),which happen to be first 5 variables
+dataTrain1<-dataTrain1[,-(1:5)]
+dataTest1<-dataTest1[,-(1:5)]
+```
+
+####Model Building
+We would apply the methods-decision trees, random forest and GBM to mdel the regressions.We would select the one with the higher accurancy when applied to dataset.A confusion matrix is applied at end of each analysis to depict the accuracy visually
+a)Decision trees
+```{r }
+set.seed(1)
+mod<-rpart(classe~.,data=dataTrain1,method="class")
+
+
+#predicion on test dataset
+predDecisionTree<-predict(mod,newdata=dataTest1,type="class")
+confDecisionTree<-confusionMatrix(predDecisionTree,dataTest1$classe)
+confDecisionTree
+#Plotting results
+plot(confDecisionTree$table,col=confDecisionTree$byclass,main=paste("Decision tree-Accuracy=",round(confDecisionTree$overall['Accuracy'],4)))
+
+```
+
+b)Random Forest
+```{r}
+set.seed(2)
+controlRF<-trainControl(method='cv',number=3,verboseIter = F)
+mod1<-train(classe~.,data=dataTrain1,method='rf',trControl=controlRF)
+mod1
+#prediction on testset
+predictRF<-predict(mod1,newdata=dataTest1)
+confRF<-confusionMatrix(predictRF,dataTest1$classe)
+confRF
+
+#plots
+plot(confRF$table,col=confRF$byClass,main=paste("Random Forest-Accuracy",round(confRF$overall['Accuracy'],4)))
+```
+
+c)Generalised Boosted Model
+```{r}
+set.seed(3)
+controlGBM<-trainControl(method='repeatedcv',number=5,repeats=1)
+mod2<-train(classe~.,data=dataTest1,method='gbm',trControl=controlGBM,verbose=FALSE)
+mod2
+#prediction on test set
+predictGBM<-predict(mod2,newdata=dataTest1)
+confGBM<-confusionMatrix(predictGBM,dataTest1$classe)
+confGBM
+#plot
+plot(confGBM$table,col=confGBM$byClass,main=paste("GBM-Accuracy=",round(confGBM$overall['Accuracy'],4)))
+```
+
+##Cross-Validation and out of sample error 
+
+Out of sample error =1-Accuracy =0.004 (Almost 0)
+The accuracy of above models are as follows-
+a.Decision Tree:0.73
+b.Random Forest:0.99
+c.GBM:0.98
+Sensitivity and sprecificity is also in the high 90s for all variables.
+So,we apply Random forest model to predict 20 quiz results as follows
+
+###Applying the selected model to the data
+```{r}
+predictT<-predict(mod1,newdata=dataTest1)
+
+## [1] BABAAEDBAABCBAEEABBB
+## levels : ABCDE
+```
+
+##Conclusion
+So Random Forest Model predicts the data best and is used for further analysis

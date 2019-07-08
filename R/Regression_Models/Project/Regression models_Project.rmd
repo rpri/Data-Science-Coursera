@@ -1,0 +1,123 @@
+---
+title: "Regression models:Project-Cars dataset analysis"
+author: "RP"
+date: "7 June 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("dplyr")
+ 
+```
+
+## Executive summary
+In this project, we analyse mtcars dataset to find if 
+1."Automatic or manual transmission is better for mpg"
+2."Quantify MPG difference between automatic and manual transmissions".
+First of all,We load dataset and do exploratory analysis.Then we use hypothesis testing and linear regression to analyse the data.We do both single and multivariate linear regression modelling but find multivariable regression analysis to fit the model better.
+
+##Exploratory Data analysis
+```{r}
+data(mtcars)
+dim(mtcars)  ##dimensions of dataset
+```
+Structure ,head and Summary of dataset is available in Table 1 ,2 & 3 respectively.
+
+##Data Processing
+
+###1.Is an automatic or manual transmission better for mpg
+We plot mpg vs transmission for the dataset as shown in Plot 2 in Appendix.It is clear from the plot that for transmission type "manual" mpg is more than auto type.
+We find means for auto and manual transmission type groups (Table 3-Appendix) and see mean for manual transmission type(24.4) is more than auto type(17.1)
+We conduct t-test for above two groups (Table 4 & 5-Appendix) and see that there is a significant difference in two groups as p-value is .06.
+
+#####Checking correlations of different variables in mtcars dataset
+```{r}
+p <- cor(mtcars)
+fit1<-lm(mpg~am,data=mtcars)
+```
+In the above linear regression model(Table5-Appendix), manual transmission cars get 7.245 mpg more than automatic transmission cars.R-squared value shows 36% of predicted variables are explained using "am" variable.So, we will explore multivariable regression also.In addition to am variable(default)(Appendix- Table 6.1), we see that variables wt, cyl,disp,hp are highly corelated with mpg.We look at corelation among variables(as shown in Appendix-Table 6.2), we see cyl and disp are highly correlated with each other, so we leave disp and we include wt and hp and cyl variables in our model also.
+
+##Multivariable linear regression analysis
+```{r}
+fit2<-lm(mpg~am+wt+hp,data=mtcars)##multivariable regression
+fit3<-lm(mpg~am+wt+hp+cyl,data=mtcars)
+anova(fit1,fit2,fit3)
+```
+Results with p-value of 4.1e-09 show the model is significantly different than linear fit1 model.Also, it r-squared value (as shown in Table 7 in appendix) is 0.84,which explains 84% of variance.We will cross check  with residuals for any signs of non-normality and examine residuals vs fitted values plot to check hetroskedasicity.
+On checking the plots(Plot 4-Appendix), we find plots are normally distributed and not hetroskedastic.We  report estimates of this model.
+
+##Conclusion
+```{r}
+summary(fit2)
+```
+The above model explains 84% of variance .Thus difference between automatic and manual transmissions is 2.08mpg
+
+##Appendix
+####Table 1-Dataset structure
+```{r}
+str(mtcars)  ##structure of mtcars dataset
+```
+####Table 2 -Dataset glimpse
+```{r}
+head(mtcars)  ## a glimpse of the mtcars dataset
+##Histogram of miles per gallon of dataset
+```
+####Table 3 -Dataset summary
+```{r}
+summary(mtcars)  ##summary of dataset
+```
+####Plot 1 -histogram -mpg 
+```{r}
+hist(mtcars$mpg,breaks=10,xlab="Miles per gallon",main="Histogram showing miles per gallon of cars")
+```
+Distribution seems to be normal.
+
+####Plot 2 -Plotting mpg Vs transmission type (am)
+```{r}
+plot(mpg~as.factor(am),data=mtcars,xlab="Transmission type",ylab="Mpg",main="Plot showing mpg Vs transmission type (am)")
+```
+It appears transmission type "1"(Manual) gives better mpg
+
+####Table 3 -Mean of manual vs auto
+```{r}
+aggregate(mpg~am,data=mtcars,mean)
+```
+####Table 4-t-test for manual vs auto
+```{r}
+#modelling with single variable (am)
+data_auto<-mtcars[mtcars$am==0,]
+data_manual<-mtcars[mtcars$am==1,]
+t.test(data_auto,data_manual)
+```
+####Table 5- T-test coefficients summary
+```{r}
+f1<-lm(mpg~as.factor(am),data=mtcars)
+##summary of t-test coefficients
+print("Table 5")
+summary(f1) ## a look at the coefficients 
+```
+####Table 6.1-Correlation of  variables with mpg
+```{r}
+p <- cor(mtcars)
+p [1,]
+```
+####Table 6.2-Correlation among variables
+```{r}
+print("Corelation of variables with each other")
+p[2,]
+p[4,]
+p[6,]
+```
+####Plot 3 -Residual plot
+```{r}
+par(mfrow=c(2,2))
+plot(fit1)
+```
+
+####Table 7-Multivariable regression summary
+```{r}
+summary(fit2)
+
+```

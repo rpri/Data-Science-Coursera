@@ -1,0 +1,113 @@
+---
+title: 'Project:Exploration of NOAA Storm Database '
+author: "Reshu"
+date: "1 June 2017"
+output: html_document
+---
+## Synopsis
+The basic goal of this assignment is to explore the NOAA Storm Database and predict which weather events have the most impact on population health (considering Falaties and injuries) and Economy (considering Property and Crop damage).
+For analysis, we read file and store the data in a dataframe.We reformat data to make it suitable for analysis.
+For Problem 1,We first group by EVTYPE and sum column "FATALITIES" and "INJURIES" to store Total impact for a particular EVTYPE in a new column Weather_impact and then we plot between fields "Weather_impact" and "EVTYPE" to find which type  of events are most harmful to health.
+For Problem 2, We first find absolute values of PROPDMG and CROPDMG by multiplying with respective multipliers .We then group by EVTYPE and sum column "PROPDMG" and "CROPDMG" to store sum for a particular EVTYPE in a new column "Economy_impact" and then plot between fields "Economy_impact" and "EVTYPE" to find which type of events have most economic consequences.
+
+##Data Processing
+###Loading data
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(data.table)
+library(ggplot2)
+
+setwd("~/Documents/resh/feb2019/R/ReproducibleSearch/Project2_Stormdata/Reproducible_search_Proj2")
+##if(!file.exists("~/StormData.csv.bz2")){
+##download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"##, destfile="~/repdata_data_StormData.csv.bz2")}
+ ##bunzip2 (destfile,  overwrite = TRUE)}
+
+```
+
+```{r}
+
+
+dataFile<-"~/Documents/Reproducible_search_Proj2/repdata_data_StormData.csv"
+data1<-read.csv(dataFile,header=TRUE,sep=",",stringsAsFactors = FALSE,na.strings=" ")
+```
+
+## Data Processing
+Cleaning and formatting the data for further analysis
+
+
+```{r}
+
+##Finding out unique exponential values for Property damage exponent
+print(unique(data1$PROPDMGEXP))
+##Finding out unique exponential values for Crop damage exponent
+print(unique(data1$CROPDMGEXP))
+## converting lower case characters to upper for Property damage exponent
+data1$PROPDMGEXP<-factor(toupper(data1$PROPDMGEXP))
+data1$CROPDMGEXP<-factor(toupper(data1$CROPDMGEXP))
+
+
+```
+
+## Weather events that cause the most impact on human health
+
+
+```{r}
+Weather_impact<-aggregate(data1$FATALITIES+data1$INJURIES,by=list(data1$EVTYPE),sum,na.rm=TRUE)
+colnames(Weather_impact)<-c("Event","Impact")
+a<-arrange(Weather_impact,desc(Impact))[1:10,]
+a
+##ggplot(aes(x=Weather_impact$Group.1,y=Weather_impact$x),data=data1)
+barplot(height=a$Impact,names.arg = a$Event,main="Health impact(Fatalities+Injuries) due to various weather conditions",beside=TRUE,col=("blue"),ylab="Fatalities+Injuries",las=2)
+
+```
+
+
+##Weather events that have the most economical consequences(Property+Crop damage)
+```{r}
+##Finding multiplier value for PROPDMG corresponding to PROPDMGEXP
+data1$PROPDMGE<-0
+data1$PROPDMGE<-0
+data1[grep("K",data1$PROPDMGEXP),"PROPDMGE"]<-1000
+data1[grep("B",data1$PROPDMGEXP),"PROPDMGE"]<-1000000000
+##data1[grep("1",data1$PROPDMGEXP),"PROPDMGE"]<-10
+data1[grep("2",data1$PROPDMGEXP),"PROPDMGE"]<-100
+data1[grep("3",data1$PROPDMGEXP),"PROPDMGE"]<-1000
+data1[grep("4",data1$PROPDMGEXP),"PROPDMGE"]<-10000
+data1[grep("5",data1$PROPDMGEXP),"PROPDMGE"]<-100000
+data1[grep("6",data1$PROPDMGEXP),"PROPDMGE"]<-1000000
+data1[grep("7",data1$PROPDMGEXP),"PROPDMGE"]<-10000000
+data1[grep("8",data1$PROPDMGEXP),"PROPDMGE"]<-100000000
+data1[grep("H",data1$PROPDMGEXP),"PROPDMGE"]<-100
+data1[grep("M",data1$PROPDMGEXP),"PROPDMGE"]<-1000000
+##data1[grep(("+|-|?|0"),data1$PROPDMGEXP),"PROPDMGE"]<-0
+##Finding multiplier value for CROPDMG corresponding to CROPDMGEXP
+data1[grep("K",data1$CROPDMGEXP),"CROPDMGE"]<-1000
+data1[grep("K",data1$CROPDMGEXP),"CROPDMGE"]<-1000
+data1[grep("M",data1$CROPDMGEXP),"CROPDMGE"]<-1000000
+data1[grep("B",data1$CROPDMGEXP),"CROPDMGE"]<-1000000000
+##data1[grep(("+|-|?|0"),data1$CROPDMGEXP),"CROPDMGE"]<-0
+##Finding total economical damage in US (Property+Crop)
+data1$TOTALPROPDMG<-0
+data1$TOTALCROPDMG<-0
+data1$TOTALDMG<-0
+data1$TOTALPROPDMG<-data1$PROPDMG*data1$PROPDMGE
+data1$TOTALCROPDMG<-data1$CROPDMG*data1$CROPDMGE
+data1$TOTALDMG<-data1$TOTALPROPDMG+data1$TOTALCROPDMG
+##Plotting Total damage vs Event type
+Economy_impact<-aggregate(data1$TOTALDMG,by=list(data1$EVTYPE),sum,na.rm=TRUE)
+colnames(Economy_impact)<-c("Event","EconomyImpact")
+b<-arrange(Economy_impact,desc(EconomyImpact))[1:10,]
+b
+##ggplot(aes(x=Weather_impact$Group.1,y=Weather_impact$x),data=data1)
+barplot(height=b$EconomyImpact,names.arg =b$Event,main="Economy Impact(Crop+Property damage) due to various weather conditions",col=c("red","green","blue","yellow"),ylab="Crop+Property Damage",las=2)
+
+
+```
+
+
+##Results
+According to the analysis above we deduce that
+1.Tornado weather event is most harmful for population health in US 
+2.Flood is the weather event that causes the most economical damage (considering Property and Crop damage)in US

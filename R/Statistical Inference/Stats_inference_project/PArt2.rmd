@@ -1,0 +1,62 @@
+---
+title: 'Statistical Inference Project:ToothGrowthdata analysis'
+author: "Reshu" 
+date: "1 June 2017" 
+output: pdf_document
+---
+##Overview
+In this assignment we will analyze the ToothGrowth data in R datasets package.We will Load ToothGrowth data & perform some basic exploratory analysis.Then we will use hypothesis tests to compare tooth growth by supp and dose.
+
+##1.Data Exploration
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE)
+library (data.table)
+library(dplyr)
+library(ggplot2)
+```
+```{r}
+data("ToothGrowth") #Loadding ToothGrowth dataset
+dim(ToothGrowth) #dimensions of ToothGrowth dataset
+str(ToothGrowth) #Structure of ToothGrowth dataset
+```
+As shown above, Toothgrowth dataset is a dataframe ,which has  60 obs of 3 variables - len(numeric) ,supp(Factor with 2 levels "OJ","VC"),dose (numeric).
+
+## 2.Summary of the dataset is shown as follows
+```{r}
+summary(ToothGrowth) #Summary of ToothGrowth dataset
+```
+
+##3.Comparison of  Tooth growth by supp and dose
+```{r}
+#Comparison by dose
+d1<-subset(ToothGrowth,dose %in% c(0.5,1.0))
+d2<-subset(ToothGrowth,dose %in% c(0.5,2.0))
+d3<-subset(ToothGrowth,dose %in% c(1.0,2.0))
+t.test(len~dose,paired=F,var.equal=F,data=d1)
+t.test(len~dose,paired=F,var.equal=F,data=d2)
+t.test(len~dose,paired=F,var.equal=F,data=d3)
+ggplot(aes(x=factor(dose),y=len),data=ToothGrowth) + geom_boxplot(aes(fill=factor(dose))) + ggtitle ("Toothlength growth vs dose") ##Plot showing Toothlength growth vs dose
+```
+The confidence intervals and p-values are as follows
+-for dosage 0.5 and 1.0 ([-11.98,-6.276]) ,p-value=1.268e-07
+-for dosage 0.5 and 2.0([-18.16,-12.83])  ,p-value= 4.398e-14
+-for dosage 1.0 and 2.0([-8.99,-3.73])    ,p-value= 1.906e-05
+p-value is very small as compared to 0.05(default calue for error tolerance alpha ) so, We reject null hypothesis and deduce that there is correlation between dosage and tooth length
+```{r}
+#Comparison by supp
+t.test(len~supp,paired=F,var.equal=F,data=ToothGrowth) 
+ggplot(aes(x=supp,y=len),data=ToothGrowth) + geom_boxplot (aes(fill=supp)) +ggtitle("Toothlength growth vs supp")##Plot showing Toothlength growth vs supp
+```
+The confidence interval is [-0.171,7.571] for dosage vs sup t-test.Also,p-value is  0.06063,which is greater than 0.05(alpha default value) So, we accept null hypthesis and deduce that there is no correlation between Supp and toothlength growth
+
+##4.Conclusion
+1.Supplement type has no effect on tooth growth
+2.Increasing dose level leads to increased tooth growth
+
+##Assumptions
+1.Populations are independent ,variances between groups are different and random sample is used
+
+##Appendix
+```{r}
+ggplot(aes(x=supp,y=len),data=ToothGrowth)+geom_boxplot(aes(fill=supp))+facet_wrap(~dose)+ggtitle("Plot showing Toothlength growth vs supp for every dosage")
+```

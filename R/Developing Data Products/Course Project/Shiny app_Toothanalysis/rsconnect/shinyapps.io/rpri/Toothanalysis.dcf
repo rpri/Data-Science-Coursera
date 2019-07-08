@@ -1,0 +1,10 @@
+name: Toothanalysis
+title: Toothanalysis
+account: rpri
+server: shinyapps.io
+appId: 190828
+bundleId: 875333
+url: https://rpri.shinyapps.io/Toothanalysis/
+when: 1497972046.16539
+asMultiple: FALSE
+asStatic: FALSE

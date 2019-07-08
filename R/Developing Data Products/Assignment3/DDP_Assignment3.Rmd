@@ -1,0 +1,48 @@
+---
+title: "Developing data products_Assignment3"
+author: "RP"
+date: "13 June 2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+##Overview
+Here,we use Presidential dataset and plot the term of US Presidents using bargraph.We plot the top 8 presidents in decreasing order of the duration of term.
+
+
+```{r , include= FALSE}
+library(plotly)
+library(ggplot2)
+```
+
+##R-Code for generating Plot using Plotly
+
+###data("presidential")
+###d<-data.frame(presidential)
+###d1<-data.frame(d)
+###d$t<-d$end - d$start
+###d1<-d[order(-d$t),]
+###d1<-d1[1:8,]
+###d1$t1<-d1$t/365
+###p<-plot_ly(d1,y=d1$t1,color=d1$name,type="bar")
+
+
+##Plot-8 US presidents(with maximum Term)
+yaxis="Presidential term (days)"
+x-axis=Various US Presidents
+
+```{r,echo=FALSE}
+
+data("presidential")
+d<-data.frame(presidential)
+d$t<-d$end - d$start
+d1<-d[order(-d$t),]
+
+d1<-d1[1:8,]
+d1$t1<-d1$t/365
+p<-plot_ly(d1,y=d1$t1,color=d1$name,type="bar")
+p
+```
+

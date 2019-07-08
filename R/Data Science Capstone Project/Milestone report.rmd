@@ -1,0 +1,153 @@
+---
+title: "Milestone Report for Data Science Capstone project"
+author: "Reshu"
+date: "25 October 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This milestone report pertains to the data science Capstone project,which aims to build a predictive text model using natural language processing techniques. We have been provided with large corpus of data belonging to three documents - twitter feed, US news feed and a blog data.
+This milestone report briefly describes loading and cleaning of data,exploratory data analysis,the major features of the data and plans for creating the prediction algorithm and Shiny app.
+
+####Loading the data
+The given 3 files-Blogs,Twitter and news are read and their data is store in RDS files for easier processing 
+```
+library(stringi) # stats files
+library(qdap)
+#Loading data
+#destination_file <- "Coursera-SwiftKey.zip"
+#source_file <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+
+# execute the download
+#download.file(source_file, destination_file)
+
+# extract the files from the zip file
+#unzip(destination_file)
+
+#Reading files
+con <- file("~/Documents/Practical machine learning/ Capstone/ final_project/ en_US.blogs.txt " , "r") 
+blog<-readLines(con, skipNul = TRUE) 
+close(con)
+con <- file("~/Documents/Practical machine learning/Capstone/final_project/en_US.news.txt", "r") 
+news<-readLines(con, skipNul = TRUE)
+close(con)
+con <- file("~/Documents/Practical machine learning/Capstone/final_project/en_US.twitter.txt", open = "rb") 
+twitter<-readLines(con , skipNul = TRUE)
+close(con)
+#save files
+saveRDS(blog,"~/Documents/Practical machine learning/Capstone/final_project/blog_stored.rds")
+saveRDS(news,"~/Documents/Practical machine learning/Capstone/final_project/news_stored.rds")
+saveRDS(twitter,"~/Documents/Practical machine learning/Capstone/final_project/twitter_stored.rds")`
+```
+###Exploratory Analysis of data
+```
+#Reading RDS files
+blog<-readRDS("~/Documents/Practical machine learning/Capstone/final_project/blog_stored")
+news<-readRDS("~/Documents/Practical machine learning/Capstone/final_project/news_stored")
+twitter<-readRDS("~/Documents/Practical machine learning/Capstone/final_project/twitter_stored")
+
+###Exploratory data analysis
+#SIZE of files
+
+file.info("~/Documents/Practical machine learning/Capstone/final_project/en_US.blogs.txt")$size
+file.info("~/Documents/Practical machine learning/Capstone/final_project/en_US.news.txt")$size
+file.info("~/Documents/Practical machine learning/Capstone/final_project/en_US.twitter.txt")$size
+
+#number of lines in files
+length(blog)
+length(news)
+length(twitter)
+
+#number of tokens(words) in files
+sum(stri_count_words(blog))
+sum(stri_count_words(news))
+sum(stri_count_words(twitter))
+```
+Here is the basic summary
+
+#####SIZE of files
+Blog-197M
+news-210M
+Twitter-160M
+
+#####Number of LINES in files
+length(blog)-899288
+length(news)-1010242
+length(twitter)-2360148
+
+#####Number of TOKENS(words) in files
+sum(stri_count_words(blog))-210160014
+sum(stri_count_words(news))-205811889
+sum(stri_count_words(twitter))-167105338
+## Including Plots
+
+###Sampling of data
+Data has been sampled to do faster processing of data as data is very large and required huge amount of time for processing
+```
+training <- .5
+testing <- .01
+all.train <- c()
+all.test <- c() 
+#for data_blog
+numLines <- length(blog)
+sampleSize <- (numLines * training / 100)
+sampledIds <- sample(1:length(blog), sampleSize) #for training
+sampledLines_blog <- blog[sampledIds]
+blog1 <- blog[-sampledIds]
+sampleSize <- (numLines * testing / 100)
+sampledIds <- sample(1:length(blog1), sampleSize) #for testing
+sampledLines_blog_test <- blog1[sampledIds]
+saveRDS( sampledLines_blog_test,"~/Documents/Practical machine learning/Capstone/final_project/blogstored_train.rds")
+```
+Above code  is also executed for News and blogs files to obtain their samples.
+
+###Preprocessing the data-cleaning data
+The following code builds corpus of the sample data and cleans it by using tm_map function by stripping white spaces, converts to lower case, removes punctuations and numbers.Also Profanity filtering is done
+```
+data1<- tm_map(data1, content_transformer(removeNumbers)) # removing numbers
+#removeURL <- function(x) gsub("http[[:alnum:]]*", "", x)
+#data1 <- tm_map(data1, content_transformer(removeURL))
+data1 <- tm_map(data1, removeWords, stopwords("english")) # removing stop words in English (a, as, at, so, etc.)
+data1 <- tm_map(data1, stripWhitespace) ## Stripping unnecessary whitespace from document
+## Convert Corpus to plain text document
+data1 <- tm_map(data1, PlainTextDocument) 
+##profanity filtering
+#profanityWords <- read.table("./profanityfilter.txt", header = FALSE)
+#data1<- tm_map(data1, removeWords, profanityWords)
+## Saving the final corpus
+saveRDS(data1,"~/Documents/Practical machine learning/Capstone/ final_project/ data_clean.RDS")
+```
+###Finding bi/tri/tetra-grams
+Our predictive algorithm will be using n-gram model with frequency lookup.
+A term document matrix is build using Weka packages.One possible strategy would be to use the trigram model to predict the next word. If no matching trigram can be found, then the algorithm would back off to the bigram model, and then to the unigram model if needed.
+```
+tokenizer <- function(ng) {
+  #' splits a string in ngrams
+  t <- function(x)
+    RWeka::NGramTokenizer(x, RWeka::Weka_control(min = ng, max = ng, delimiters = " \\r\\n\\t"))}
+###
+ngram_table <- function(data) {
+  if (is.null(data$txt)) {data$txt <- readRDS("~/Documents/Practical machine learning/Capstone/final_project/data_all.rds")  }
+```
+###Plots
+######Histograms of words appearing at least 15000times 
+```
+freqBigram <- rowSums(as.matrix(corpusDTMBigrams))
+wordFrameBigram <- data.frame(word=names(freqBigram),count=freqBigram,stringsAsFactors=FALSE)
+bigramPlot <- ggplot(subset(wordFrameBigram, count > 15000), aes(word,count))
+bigramPlot <- bigramPlot + geom_bar(stat="identity")
+bigramPlot <- bigramPlot + theme(axis.text.x=element_text(angle=45, hjust=1))
+bigramPlot
+```
+#####Most frequent 10 Trigrams that appear more than 1000 times in data
+```
+head(findFreqTerms(corpusDTMTrigrams,lowfreq=1000),10)
+```
+###Data Modeling
+Now after building n-grams and building a dictionary of limited size which will be used for predictive modeling,we build build a prediction model using MLE (Maximum Likelihood Probability estimate) probabilities calculated from the 4-gram model and obtain the best set of coefficients  obtained in the previous step with the test data set to validate the model.
+Final deliverable is a shiny app -where user inputs a word or two and next word is predicted.

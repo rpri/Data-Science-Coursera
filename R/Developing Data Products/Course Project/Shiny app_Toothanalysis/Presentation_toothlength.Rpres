@@ -1,0 +1,65 @@
+Presentation on Toothlength growth analysis
+========================================================
+author: RP
+date: 20-06-2017
+autosize: true
+
+Overview
+========================================================
+
+In this app, we analyse Toothlength growth with respect to dosage and type of supplement provided.
+
+For this, we print regression statistics and plot mean length of Toothgrowth (calculated) against the following options given by user
+
+-1. Dosage of supplement
+
+-2. Supplement type
+
+-3. Dosage for every supplement type
+
+Resources- App,Code  
+========================================================
+
+-For Shiny app, Please refer to the following shinyapps link 
+https://rpri.shinyapps.io/Toothanalysis/
+(please open in googlechrome browser for best view)
+
+For Shiny app's code (UI.R and Server.R), Please refer to the github link
+https://github.com/rpri/developingdataproducts
+
+Slide With Regression statistics
+========================================================
+Depending on user's choice ,Regression statistics are displayed
+For eg, Following is Regression of Toothlength growth Vs Supplement type
+```{r}
+
+fit2<-lm(ToothGrowth$len ~ ToothGrowth$supp)
+      summary(fit2)
+```
+
+Slide With Plot of Tooth length growth Vs Supplement type
+========================================================
+
+```{r, echo=FALSE}
+#display plot by supplement type
+   library(shiny)
+library(ggplot2)
+g<-ggplot(aes(x = supp, y = len), data=ToothGrowth) + 
+      geom_boxplot(aes(fill = supp))+ggtitle("Plot showing Toothlength growth Vs supp")
+print(g)
+```
+
+Slide With Plot of Toothlength growth Vs Supp and dosage
+========================================================
+
+```{r, echo=FALSE}
+
+#display plot by supplement type and dosage
+g<-ggplot(aes(x=supp, y=len),data = ToothGrowth) +
+        geom_boxplot(aes(fill=supp))+facet_wrap(~ dose)+ggtitle("Plot showing Toothlength Vs supp for every dose ")
+
+    print(g)
+```
+
+Thank you
+========================================================

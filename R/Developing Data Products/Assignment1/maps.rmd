@@ -1,0 +1,32 @@
+---
+title: "Interactive maps showing Capitals of Asian countries"
+author: "RP"
+date: "13 June 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Map showing capitals of Asian countries
+
+The following map shows capitals of various Asian countries in circles.Radius of circle is proportional to the Country population.Also,there is a popup showing capital of the corresponding country.If we click on the capital, wikipedia information about that city is displayed.
+
+
+```{r }
+library(leaflet)
+my_map<-data.frame(name=c("Beijing(china)","Tokyo(Japaan)","Seoul(SouthKorea)","Astana(Kazakhstan)","Moscow(Russia)","Jakarta(Indonesia)","Delhi(India)","Islamabad(Pakistan)"),
+links=c("<a href='https://en.wikipedia.org/wiki/Beijing' >Beijing</a>","<a href='https://en.wikipedia.org/wiki/Tokyo'>Tokyo</a>","<a href='https://en.wikipedia.org/wiki/Seoul'>Seoul</a>", "<a href='https://en.wikipedia.org/wiki/Astana'>Astana</a>","<a href='https://en.wikipedia.org/wiki/Moscow'>Moscow</a>","<a href='https://en.wikipedia.org/wiki/Jakarta'>Jakarta</a>","<a href = 'https://en.wikipedia.org/wiki/Delhi'>Delhi</a>","<a href='https://en.wikipedia.org/wiki/Islamabad'> Islamabad</a>"),
+                                      pop=c(1322044605,127920000,49232844,16536000,37630081,230512000,1147995226,167762049),
+                                      lat=c(39.55,35.41,37.34,51.10,55.45,-6.12,28.37,33.43),
+                                      lng=c(116,	139,	126,71,37,106,77,73.04))
+
+my_map %>%
+leaflet () %>% 
+  addTiles() %>%
+  addCircles(weight=1,radius=sqrt(my_map$pop)*20) %>%
+  addMarkers(lat=my_map$lat,lng=my_map$lng,popup=my_map$links)
+#my_map<-my_map %>% addAwesomeMarkers(popup = "Highlight")
+
+```

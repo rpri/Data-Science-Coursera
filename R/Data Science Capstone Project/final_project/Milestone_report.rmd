@@ -1,0 +1,295 @@
+---
+title: "Milestone_report for Data science Capstone project"
+author: "Reshu"
+date: "14 October 2017"
+output: html_document
+---
+#Milestone report for the project
+##Overview
+```{r setup, include=FALSE}
+library(stringi) # stats files
+library(NLP); library(openNLP)
+library(tm) # Text mining
+library(rJava)
+library(RWeka) # tokenizer - create unigrams, bigrams, trigrams
+library(RWekajars)
+library(SnowballC) # Stemming
+library(RColorBrewer) # Color palettes
+library(qdap)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+###Exploratory data analysis
+####Data
+
+####Loading data
+```{r}
+#blogsURL <- file("en_US.blogs.txt", open="rb") # open for reading in binary mode
+#blogs <- readLines(blogsURL, encoding = "UTF-8", skipNul=TRUE)
+dataset_blog:con <- file("~\en_US.blogs.txt", "r") 
+blog<-readLines(con) 
+
+dataset_news:con <- file("~\en_US.news.txt", "r") 
+# ewsURL <-file("en_US.news.txt",open= "rb") # open for reading in binary mode
+#news <- readLines(newsURL, encoding = "UTF-8", skipNul=TRUE)
+news<- readLines(con)
+
+dataset_twitter:con <- file("en_US.twitter.txt", open = "rb") 
+# open for reading in binary mode
+#twitter <- readLines(twitterURL, encoding = "UTF-8", skipNul=TRUE)
+twitter<-readLines(con )
+
+#size of files
+file.info("~\en_US.blogs.txt")$size
+file.info("~\en_US.news.txt")$size
+file.info("~\en_US.twitter.txt")$size
+
+#number of lines in files
+length(blogs)
+length(news)
+length(twitter)
+
+#number of tokens(words) in files
+sum(stri_count_words(blogs))
+sum(stri_count_words(news))
+sum(stri_count_words(twitter))
+
+#Data sample (subset) obtained for analysis
+set.seed(2)
+data_blogs<-sample(blogs,size=5000,replace = FALSE)
+data_news<-sample(news,size=5000,replace = FALSE)
+data_twitter<-sample(twitter,size=5000,replace = FALSE)
+
+
+```
+### Data cleaning 
+Data needs to be cleaned to 
+Following tactics are used to clean data
+-removing whitespaces
+-removing numbers,special characters ,punctuation 
+-profanity check is done-to remove unwanted words
+
+Library used is TM to load corpus into memory and do data cleaning
+-
+```{r}
+data<-c(data_blogs,data_news,data_twitter)
+data1<-Corpus(VectorSource(data)) #reading text as lists
+
+#data cleaning-renoving 
+
+clean_text <- function (string) {
+                               temp <-tolower(string)
+                               #remove  characters  other than letters
+                               temp<-stringr::str_replace_all(temp,'[^a-zA-Z\\s]','')
+                               #remove white spaces to just 1
+                               temp<-stringr::str_replace_all(temp,'[\\s]+',' ')
+                               #Splitting
+                               temp<- stringr::str_split(temp,' ')[[1]]
+                               index<-which(temp=='')
+                               if(length(index)>0){
+                                         temp<-temp[-index]}
+                               return(temp)
+                                  }
+Clean_Text_Block <- function(text) {
+                                    if(length(text) <= 1){
+                                      # Check if there is any text with another condition
+                                        if(length(text) == 0){
+                                             cat("There was no text in this document! \n")
+                                             to_return <- list(num_tokens = 0,                                                         unique_tokens = 0, text = "")}
+                                         else{
+                                            # If there is , and only only one line of text                                              then tokenize it
+                                            clean_text <- Clean_String(text)
+                                            num_tok <- length(clean_text)
+                                            num_uniq <- length(unique(clean_text))
+                                            to_return <- list(num_tokens = num_tok,                                                   unique_tokens = num_uniq, text = clean_text)
+                                               }
+                                              }
+                                      else{
+                                          # Get rid of blank lines
+                                             indexes <- which(text == "")
+                                             if(length(indexes) > 0){
+                                               text <- text[-indexes]
+                                                      }  
+   # Loop through the lines in the text and use the append() function to 
+   clean_text <- Clean_String(text[1])
+   for(i in 2:length(text)){
+          # add them to a vector 
+          clean_text <- append(clean_text,Clean_String(text[i]))
+           }
+    # Calculate the number of tokens and unique tokens and return them in a 
+    # named list object.
+    num_tok <- length(clean_text)
+    num_uniq <- length(unique(clean_text))
+    to_return <- list(num_tokens = num_tok, unique_tokens = num_uniq, text = clean_text)
+    }
+    return(to_return)
+}
+clean_data <- Clean_Text_Block(data)
+str(clean_data)
+#removing profanity
+profanityWords = readLines('profanity-words.txt')
+data1 <- tm_map(data1,removeWords, profanityWords)
+
+data1<- tm_map(data1, content_transformer(removeNumbers)) # removing numbers
+
+removeURL <- function(x) gsub("http[[:alnum:]]*", "", x)
+data1 <- tm_map(data1, content_transformer(removeURL))
+
+data1 <- tm_map(data1, removeWords, stopwords("english")) # removing stop words in English (a, as, at, so, etc.)
+
+data1 <- tm_map(data1, stripWhitespace) ## Stripping unnecessary whitespace from document
+
+## Convert Corpus to plain text document
+data1 <- tm_map(data1, PlainTextDocument) 
+##  textcorpus
+for (i in 1:10){
+print(textCorpus[[i]]$content)
+}
+
+##profanity filtering
+profanityWords <- read.table("./profanityfilter.txt", header = FALSE)
+data1<- tm_map(data1, removeWords, profanityWords)
+## Saving the final corpus
+saveRDS(data1, file = "./finaldata/finalCorpus.RData")
+```
+###Finding n-grams
+otaining n-grams from the corpus
+The tokenizer method is allowed in R using the package RWeka. The following function is used to extract 1-grams, 2-grams, 3-grams and 4-grams from the text Corpus using RWeka.
+
+```{r}
+#Obtaining 1-grams
+finalCorpusMem <- readRDS("./finaldata/finalCorpus.RData")
+## data framing finalcorpus
+finalCorpus <-data.frame(text=unlist(sapply(finalCorpusMem,`[`, "content")),stringsAsFactors = FALSE)
+##uni-grams
+## Tokenizer function to get unigrams
+unigram <- NGramTokenizer(finalCorpus, Weka_control(min = 1, max = 1,delimiters = " \\r\\n\\t.,;:\"()?!"))
+unigram <- data.frame(table(unigram))
+unigram <- unigram[order(unigram$Freq,decreasing = TRUE),]
+
+names(unigram) <- c("word1", "freq")
+head(unigram)
+unigram$word1 <- as.character(unigram$word1)
+
+write.csv(unigram[unigram$freq > 1,],"unigram.csv",row.names=F)
+unigram <- read.csv("unigram.csv",stringsAsFactors = F)
+saveRDS(unigram, file = "unigram.RData")
+##Bigrams
+
+bigram <- NGramTokenizer(finalCorpus, Weka_control(min = 2, max = 2,delimiters = " \\r\\n\\t.,;:\"()?!"))
+bigram <- data.frame(table(bigram))
+bigram <- bigram[order(bigram$Freq,decreasing = TRUE),]
+names(bigram) <- c("words","freq")
+head(bigram)
+bigram$words <- as.character(bigram$words)
+str2 <- strsplit(bigram$words,split=" ")
+bigram <- transform(bigram, 
+                    one = sapply(str2,"[[",1),   
+                    two = sapply(str2,"[[",2))
+bigram <- data.frame(word1 = bigram$one,word2 = bigram$two,freq = bigram$freq,stringsAsFactors=FALSE)
+
+## saving files 
+write.csv(bigram[bigram$freq > 1,],"bigram.csv",row.names=F)
+bigram <- read.csv("bigram.csv",stringsAsFactors = F)
+saveRDS(bigram,"bigram.RData")
+
+# Tokenizer function to get trigrams
+trigram <- NGramTokenizer(finalCorpus, Weka_control(min = 3, max = 3,delimiters = " \\r\\n\\t.,;:\"()?!"))
+trigram <- data.frame(table(trigram))
+trigram <- trigram[order(trigram$Freq,decreasing = TRUE),]
+names(trigram) <- c("words","freq")
+head(trigram)
+##################### 
+trigram$words <- as.character(trigram$words)
+str3 <- strsplit(trigram$words,split=" ")
+trigram <- transform(trigram,
+                     one = sapply(str3,"[[",1),
+                     two = sapply(str3,"[[",2),
+                     three = sapply(str3,"[[",3))
+# trigram$words <- NULL
+trigram <- data.frame(word1 = trigram$one,word2 = trigram$two, 
+                      word3 = trigram$three, freq = trigram$freq,stringsAsFactors=FALSE)
+# saving files
+write.csv(trigram[trigram$freq > 1,],"trigram.csv",row.names=F)
+trigram <- read.csv("trigram.csv",stringsAsFactors = F)
+saveRDS(trigram,"trigram.RData")
+
+quadgram <- NGramTokenizer(finalCorpus, Weka_control(min = 4, max = 4,delimiters = " \\r\\n\\t.,;:\"()?!"))
+quadgram <- data.frame(table(quadgram))
+quadgram <- quadgram[order(quadgram$Freq,decreasing = TRUE),]
+
+names(quadgram) <- c("words","freq")
+quadgram$words <- as.character(quadgram$words)
+
+str4 <- strsplit(quadgram$words,split=" ")
+quadgram <- transform(quadgram,
+                      one = sapply(str4,"[[",1),
+                      two = sapply(str4,"[[",2),
+                      three = sapply(str4,"[[",3), 
+                      four = sapply(str4,"[[",4))
+# quadgram$words <- NULL
+quadgram <- data.frame(word1 = quadgram$one,
+                       word2 = quadgram$two, 
+                       word3 = quadgram$three, 
+                       word4 = quadgram$four, 
+                       freq = quadgram$freq, stringsAsFactors=FALSE)
+# saving files
+write.csv(quadgram[quadgram$freq > 1,],"quadgram.csv",row.names=F)
+quadgram <- read.csv("quadgram.csv",stringsAsFactors = F)
+saveRDS(quadgram,"quadgram.RData")
+
+## Building the tokenization function for the n-grams
+#ngramTokenizer <- function(theCorpus, ngramCount) {
+ #       ngramFunction <- NGramTokenizer(theCorpus, 
+ #                                       Weka_control(min = ngramCount, max = ngramCount, 
+#                                                     delimiters = " \\r\\n\\t.,;:\"()?!"))
+  #      ngramFunction <- data.frame(table(ngramFunction))
+   #     ngramFunction <- ngramFunction[order(ngramFunction$Freq, 
+    #                                         decreasing = TRUE),][1:10,]
+     #   colnames(ngramFunction) <- c("String","Count")
+      #  ngramFunction
+#}
+
+#unigram <- ngramTokenizer(finalCorpusDF, 1)
+#saveRDS(unigram, file = "./unigram.RData")
+#bigram <- ngramTokenizer(finalCorpusDF, 2)
+#saveRDS(bigram, file = "./bigram.RData")
+#trigram <- ngramTokenizer(finalCorpusDF, 3)
+#saveRDS(trigram, file = "./trigram.RData")
+#quadgram <- ngramTokenizer(finalCorpusDF, 4)
+#saveRDS(quadgram, file = "./quadgram.RData")
+
+#Plotting
+#Unigrams plotting
+## Unigram Plot
+unigram <- readRDS("unigram.RData")
+g1 <- ggplot(data=unigram[1:10,], aes(x = word1, y = freq))
+g2 <- g1 + geom_bar(stat="identity") + coord_flip() + ggtitle("Frequently Words")
+g3 <- g2 + geom_text(data = unigram[1:10,], aes(x = word1, y = freq, label = freq), hjust=-1, position = "identity")
+g3
+#bigram plot
+g1 <- ggplot(data=bigram[1:10,], aes(x = word1, y = freq))
+g2 <- g1 + geom_bar(stat="identity") + coord_flip() + ggtitle("Frequently Words")
+g3 <- g2 + geom_text(data = bigram[1:10,], aes(x = word1, y = freq, label = freq), hjust=-1, position = "identity")
+
+
+```
+
+Now we would implement the following
+-Build a shiny app to predict next word (through prediction model) after user inputs a word
+-Prepare a pitch about the app and publish in shiny server
+##Conclusion
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

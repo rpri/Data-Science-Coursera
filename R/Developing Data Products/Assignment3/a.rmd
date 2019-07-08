@@ -1,0 +1,37 @@
+---
+title: "Interactive Plot-Assignment _week3"
+author: "RP"
+date: "13 June 2017"
+output: ioslides_presentation
+---
+
+```{r }
+
+```
+
+## R Markdown
+
+T
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+library(plotly)
+data("presidential")
+d<-data.frame(presidential)
+d$t<-d$end - d$start
+p<-plot_ly(presidential,y=d$t,color=d$name,type="box")
+p
+```
+
+## Slide with Plot
+
+```{r }
+
+```
+

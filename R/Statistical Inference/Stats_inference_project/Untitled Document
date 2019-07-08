@@ -1,0 +1,10 @@
+
+The basic goal of this assignment is to explore the NOAA Storm Database and predict which weather events have the most impact on population health (considering Falaties and injuries) and Economy (considering Property and Crop damage).
+For analysis, we read file and store the data in a dataframe.We reformat data to make it suitable for analysis.
+For Problem 1,We first group by EVTYPE and sum column "FATALITIES" and "INJURIES" to store Total impact for a particular EVTYPE in a new column Weather_impact and then we plot between fields "Weather_impact" and "EVTYPE" to find which type  of events are most harmful to health.
+For Problem 2, We first find absolute values of PROPDMG and CROPDMG by multiplying with respective multipliers .We then group by EVTYPE and sum column "PROPDMG" and "CROPDMG" to store sum for a particular EVTYPE in a new column "Economy_impact" and then plot between fields "Economy_impact" and "EVTYPE" to find which type of events have most economic consequences.
+
+##Finding out unique exponential values for Property damage exponent
+##print(unique(data1$PROPDMGEXP))
+##Finding out unique exponential values for Crop damage exponent
+##print(unique(data1$CROPDMGEXP))
